@@ -1,4 +1,3 @@
-# .github/workflows/deploy.yml
 name: Deploy
 
 on:
@@ -12,30 +11,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build image
+      - name: Prepare SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
-          docker build -t registry.example.com/youruser/kubsu:latest .
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
 
-      - name: Push image
+      - name: Add server to known hosts
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
-          docker login registry.example.com -u $REGISTRY_USER -p $REGISTRY_PASSWORD
-          docker push registry.example.com/youruser/kubsu:latest
+          ssh-keyscan "$SSH_HOST" >> ~/.ssh/known_hosts
 
       - name: Deploy on server
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_KEY: ${{ secrets.SSH_KEY }}
+          APP_PORT_INTERNAL: "8062"   # порт, на котором слушает приложение в контейнере
+          APP_PORT_EXTERNAL: "60080"  # внешний порт сервера
         run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<'EOF'
+          ssh "$SSH_USER@$SSH_HOST" <<'EOF'
+          set -e
+          cd /home/hawking/kubsu-linups  # замените на свой путь
           git pull
           docker build -t kubsu:latest .
           docker rm -f kubsu-app || true
           docker run -d --restart=always --name kubsu-app \
-              -p 60080:8062 \
-              registry.example.com/youruser/kubsu:latest
+              -p ${APP_PORT_EXTERNAL}:${APP_PORT_INTERNAL} \
+              kubsu:latest
           EOF
