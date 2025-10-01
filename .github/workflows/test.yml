@@ -21,10 +21,8 @@ jobs:
 
       - name: Install project with test deps
         run: |
-          cd docker
           pip install ".[test]"
 
       - name: Run tests
         run: |
-          cd docker
           pytest

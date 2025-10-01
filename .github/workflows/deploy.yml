@@ -14,7 +14,6 @@ jobs:
 
       - name: Build image
         run: |
-          cd docker
           docker build -t registry.example.com/youruser/kubsu:latest .
 
       - name: Push image
