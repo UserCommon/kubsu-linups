@@ -18,8 +18,9 @@ COPY src ./src
 
 # Устанавливаем пакеты
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install ".[test]"  # при необходимости оставить просто "."
+    && pip install ".[test]"
 
-EXPOSE 8062  # замените на порт из кредитного листа
+EXPOSE 8062  
+# замените на порт из кредитного листа
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8062"]
