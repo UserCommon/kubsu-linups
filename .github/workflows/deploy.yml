@@ -32,7 +32,8 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
 
           ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<'EOF'
-          docker pull registry.example.com/youruser/kubsu:latest
+          git pull
+          docker build -t kubsu:latest .
           docker rm -f kubsu-app || true
           docker run -d --restart=always --name kubsu-app \
               -p 60080:8062 \
