@@ -1,0 +1,41 @@
+# .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          cd docker
+          docker build -t registry.example.com/youruser/kubsu:latest .
+
+      - name: Push image
+        run: |
+          docker login registry.example.com -u $REGISTRY_USER -p $REGISTRY_PASSWORD
+          docker push registry.example.com/youruser/kubsu:latest
+
+      - name: Deploy on server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<'EOF'
+          docker pull registry.example.com/youruser/kubsu:latest
+          docker rm -f kubsu-app || true
+          docker run -d --restart=always --name kubsu-app \
+              -p 60080:8062 \
+              registry.example.com/youruser/kubsu:latest
+          EOF
